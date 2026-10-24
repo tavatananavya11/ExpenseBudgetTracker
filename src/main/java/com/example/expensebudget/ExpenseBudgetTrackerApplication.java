@@ -17,7 +17,11 @@ public class ExpenseBudgetTrackerApplication {
 
     private static void createDatabaseDirectory() {
         try {
-            Files.createDirectories(Path.of("data"));
+            Path databasePath = Path.of(System.getenv().getOrDefault("DB_PATH", "./data/expense-tracker.db"));
+            Path databaseDirectory = databasePath.toAbsolutePath().getParent();
+            if (databaseDirectory != null) {
+                Files.createDirectories(databaseDirectory);
+            }
         } catch (IOException exception) {
             throw new IllegalStateException("Could not create the data directory for the SQLite database.", exception);
         }

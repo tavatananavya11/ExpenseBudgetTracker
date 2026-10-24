@@ -54,9 +54,32 @@ The app starts with an empty database; it does not insert sample data.
 
 ## Database and data safety
 
-The SQLite database is created automatically at `data/expense-tracker.db` the first time the app starts. Keep this file to preserve your records. The app does not require a separately installed database server.
+The SQLite database is created automatically at `data/expense-tracker.db` the first time the app starts. Keep this file to preserve your records. The app does not require a separately installed database server. You can set `DB_PATH` to use another database file; the app creates its parent directory if needed, and does not delete or reset the database when it starts.
 
 The charts use Chart.js from jsDelivr, and the typeface is loaded from Google Fonts. Those two visual assets need an internet connection; saving and loading records uses the local app and database.
+
+## Run with Docker
+
+Docker must be installed and running. From the project root, build and start the app with a persistent local Docker volume:
+
+```powershell
+docker build -t expense-budget-tracker .
+docker run --name expense-budget-tracker -p 8080:8080 -e PORT=8080 -e DB_PATH=/var/data/expense-tracker.db -v expense-budget-data:/var/data expense-budget-tracker
+```
+
+Open [http://localhost:8080](http://localhost:8080). The named Docker volume keeps the database when you remove and recreate the container. To stop the container, press **Ctrl+C** and run `docker rm expense-budget-tracker` before creating another container with that name.
+
+## Deploy on Render
+
+**Security warning:** This app does not currently have sign-in or access control. Anyone who can reach its public URL can view, add, edit, or delete transactions and budgets. Use a demo or non-sensitive database until authentication is added; a hard-to-guess URL is not access control.
+
+1. Push the project to GitHub, then in Render choose **New → Web Service** and connect the `ExpenseBudgetTracker` repository.
+2. Choose the branch you want to deploy and select **Docker** as the runtime. Set the Dockerfile path to `./Dockerfile`; leave the build and start command fields empty so Render uses the Dockerfile.
+3. Add the environment variable `DB_PATH` with the value `/var/data/expense-tracker.db`.
+4. Add a Render persistent disk to the service and set its mount path to `/var/data`. Choose an available disk size in Render. The disk is what keeps SQLite data across deploys and restarts; without it, data stored in the container filesystem can be lost.
+5. Render supplies `PORT` to the web service. The application reads that variable and uses `8080` when it is not set. Do not hardcode a different port in Render. After deployment, open the public URL shown on the service page.
+
+The Docker image contains the application, not your local SQLite file. To keep an existing local database, migrate it to the Render disk separately; do not add the database file to Git or bake it into the image.
 
 ## Build and test
 

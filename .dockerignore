@@ -1,0 +1,16 @@
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+target/
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
