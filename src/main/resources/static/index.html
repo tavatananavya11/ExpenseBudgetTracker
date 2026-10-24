@@ -30,7 +30,7 @@
             <strong>Small steps add up.</strong>
             <p>Keep an eye on your spending and make your money work for you.</p>
         </div>
-        <div class="sidebar-footer"><span class="status-dot"></span> Your data stays on this device</div>
+        <div class="sidebar-footer"><span class="status-dot"></span> Your data belongs to your account</div>
     </aside>
 
     <main class="main-content" id="dashboard">
@@ -48,6 +48,10 @@
                 <button class="button button-primary" id="addTransactionButton" type="button">
                     <span aria-hidden="true">＋</span> Add transaction
                 </button>
+                <div class="account-controls">
+                    <span id="currentUserEmail" aria-live="polite"></span>
+                    <button class="button button-secondary" id="logoutButton" type="button">Log out</button>
+                </div>
             </div>
         </header>
 

@@ -95,15 +95,35 @@ function monthLabel(month) {
 async function apiRequest(url, options = {}) {
     let response;
     try {
+        const headers = { "Content-Type": "application/json", ...options.headers };
+        if (options.method && !["GET", "HEAD", "OPTIONS"].includes(options.method.toUpperCase())) {
+            const csrfResponse = await fetch("/api/auth/csrf", { cache: "no-store" });
+            if (!csrfResponse.ok) {
+                if (csrfResponse.status === 401) {
+                    window.location.replace("/login.html?expired=1");
+                }
+                throw new Error("Could not verify your session. Refresh the page and try again.");
+            }
+            const csrf = await csrfResponse.json();
+            headers[csrf.headerName] = csrf.token;
+        }
         response = await fetch(url, {
             ...options,
-            headers: { "Content-Type": "application/json", ...options.headers }
+            headers,
+            cache: "no-store"
         });
-    } catch {
-        throw new Error("Could not reach the app server. Check that it is running and try again.");
+    } catch (error) {
+        if (error instanceof TypeError) {
+            throw new Error("Could not reach the app server. Check that it is running and try again.");
+        }
+        throw error;
     }
 
     if (!response.ok) {
+        if (response.status === 401) {
+            window.location.replace("/login.html?expired=1");
+            throw new Error("Your session has ended. Please log in again.");
+        }
         let message = `Request failed (${response.status}).`;
         try {
             const errorBody = await response.json();
@@ -446,6 +466,7 @@ function initialize() {
     document.querySelector("#addTransactionButton").addEventListener("click", () => openTransactionDialog());
     document.querySelector("#emptyAddButton").addEventListener("click", () => openTransactionDialog());
     document.querySelector("#editBudgetButton").addEventListener("click", openBudgetDialog);
+    document.querySelector("#logoutButton").addEventListener("click", logout);
     elements.transactionForm.addEventListener("submit", saveTransaction);
     elements.budgetForm.addEventListener("submit", saveBudget);
     elements.transactionsBody.addEventListener("click", event => {
@@ -466,7 +487,21 @@ function initialize() {
     document.querySelectorAll("[data-close-dialog]").forEach(button => {
         button.addEventListener("click", () => document.getElementById(button.dataset.closeDialog).close());
     });
-    loadDashboard();
+    apiRequest("/api/auth/me")
+        .then(profile => {
+            document.querySelector("#currentUserEmail").textContent = profile.email;
+            return loadDashboard();
+        })
+        .catch(error => showToast(error.message, true));
+}
+
+async function logout() {
+    try {
+        await apiRequest("/api/auth/logout", { method: "POST" });
+        window.location.replace("/login.html");
+    } catch (error) {
+        showToast(error.message, true);
+    }
 }
 
 document.addEventListener("DOMContentLoaded", initialize);

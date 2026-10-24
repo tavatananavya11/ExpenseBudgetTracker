@@ -10,6 +10,7 @@ import com.example.expensebudget.model.TransactionRequest;
 import com.example.expensebudget.repository.BudgetRepository;
 import com.example.expensebudget.repository.Money;
 import com.example.expensebudget.repository.TransactionRepository;
+import com.example.expensebudget.security.CurrentUserService;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
@@ -24,35 +25,39 @@ import java.util.stream.Collectors;
 public class TrackerService {
     private final TransactionRepository transactionRepository;
     private final BudgetRepository budgetRepository;
+    private final CurrentUserService currentUserService;
 
-    public TrackerService(TransactionRepository transactionRepository, BudgetRepository budgetRepository) {
+    public TrackerService(TransactionRepository transactionRepository, BudgetRepository budgetRepository,
+                          CurrentUserService currentUserService) {
         this.transactionRepository = transactionRepository;
         this.budgetRepository = budgetRepository;
+        this.currentUserService = currentUserService;
     }
 
     public List<TransactionEntry> getTransactions(String month) {
-        return transactionRepository.findByMonth(normalizeMonth(month));
+        return transactionRepository.findByMonth(normalizeMonth(month), currentUserService.requiredUserId());
     }
 
     public TransactionEntry createTransaction(TransactionRequest request) {
         long id = transactionRepository.insert(request.type(), request.category(), Money.toCents(request.amount()),
-                request.description().trim(), request.date());
-        return transactionRepository.findById(id)
+                request.description().trim(), request.date(), currentUserService.requiredUserId());
+        return transactionRepository.findById(id, currentUserService.requiredUserId())
                 .orElseThrow(() -> new IllegalStateException("The saved transaction could not be loaded."));
     }
 
     public TransactionEntry updateTransaction(long id, TransactionRequest request) {
         boolean updated = transactionRepository.update(id, request.type(), request.category(),
-                Money.toCents(request.amount()), request.description().trim(), request.date());
+                Money.toCents(request.amount()), request.description().trim(), request.date(),
+                currentUserService.requiredUserId());
         if (!updated) {
             throw new ResourceNotFoundException("Transaction " + id + " was not found.");
         }
-        return transactionRepository.findById(id)
+        return transactionRepository.findById(id, currentUserService.requiredUserId())
                 .orElseThrow(() -> new IllegalStateException("The updated transaction could not be loaded."));
     }
 
     public void deleteTransaction(long id) {
-        if (!transactionRepository.delete(id)) {
+        if (!transactionRepository.delete(id, currentUserService.requiredUserId())) {
             throw new ResourceNotFoundException("Transaction " + id + " was not found.");
         }
     }
@@ -60,8 +65,9 @@ public class TrackerService {
     public DashboardSummary getSummary(String month) {
         YearMonth selectedMonth = parseMonth(month);
         String monthKey = selectedMonth.toString();
-        TransactionRepository.Totals totals = transactionRepository.totalsForMonth(monthKey);
-        long budgetCents = budgetRepository.findAmountCents(monthKey).orElse(0L);
+        long userId = currentUserService.requiredUserId();
+        TransactionRepository.Totals totals = transactionRepository.totalsForMonth(monthKey, userId);
+        long budgetCents = budgetRepository.findAmountCents(monthKey, userId).orElse(0L);
         long balanceCents = totals.incomeCents() - totals.expenseCents();
         long budgetRemainingCents = budgetCents - totals.expenseCents();
         double usagePercent = budgetCents == 0 ? 0.0 : totals.expenseCents() * 100.0 / budgetCents;
@@ -74,14 +80,15 @@ public class TrackerService {
     public MonthlyReport getReport(String month) {
         YearMonth selectedMonth = parseMonth(month);
         DashboardSummary summary = getSummary(selectedMonth.toString());
-        List<CategoryTotal> categories = transactionRepository.expensesByCategory(selectedMonth.toString())
+        long userId = currentUserService.requiredUserId();
+        List<CategoryTotal> categories = transactionRepository.expensesByCategory(selectedMonth.toString(), userId)
                 .stream()
                 .map(amount -> new CategoryTotal(amount.category(), Money.fromCents(amount.amountCents())))
                 .toList();
 
         YearMonth startMonth = selectedMonth.minusMonths(5);
         Map<String, TransactionRepository.MonthAmount> totalsByMonth =
-                transactionRepository.totalsBetween(startMonth.toString(), selectedMonth.toString())
+                transactionRepository.totalsBetween(startMonth.toString(), selectedMonth.toString(), userId)
                         .stream()
                         .collect(Collectors.toMap(TransactionRepository.MonthAmount::month, Function.identity()));
         List<MonthTotal> monthlyTotals = IntStream.range(0, 6)
@@ -101,7 +108,7 @@ public class TrackerService {
 
     public DashboardSummary updateBudget(String month, BudgetRequest request) {
         String monthKey = normalizeMonth(month);
-        budgetRepository.save(monthKey, Money.toCents(request.amount()));
+        budgetRepository.save(monthKey, Money.toCents(request.amount()), currentUserService.requiredUserId());
         return getSummary(monthKey);
     }
 

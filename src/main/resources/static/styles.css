@@ -54,6 +54,8 @@ h1 { margin-bottom: 6px; font-size: clamp(22px, 2.3vw, 29px); font-weight: 700; 
 .heading-period { color: var(--green); }
 .topbar-subtitle { margin-bottom: 0; color: var(--muted); font-size: 12px; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
+.account-controls { display: flex; align-items: center; gap: 9px; }
+#currentUserEmail { max-width: 180px; overflow: hidden; color: #778294; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .month-picker-wrap { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 11px; border: 1px solid #e7eaf0; border-radius: 8px; background: #fff; color: #8490a0; }
 .month-picker-wrap input { width: 121px; border: 0; outline: 0; color: #4d596b; font-size: 12px; }
 .button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 8px; padding: 0 15px; border: 1px solid transparent; border-radius: 8px; font-size: 12px; font-weight: 700; transition: transform .15s ease, background .15s ease; }
@@ -195,6 +197,7 @@ th:last-child, td:last-child { width: 77px; text-align: right; }
     .main-content { margin: 0; padding: 23px 15px 20px; }
     .topbar { gap: 15px; margin-bottom: 20px; }
     .topbar-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+    .account-controls { grid-column: 1 / -1; justify-content: space-between; }
     .month-picker-wrap { min-width: 0; }
     .month-picker-wrap input { width: 100%; min-width: 0; }
     .topbar-actions .button { padding: 0 10px; font-size: 10px; }
